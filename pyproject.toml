@@ -1,0 +1,23 @@
+[project]
+name = "car-api"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "andreluoliveira82",email = "andreluoliveira@outlook.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13,<4.0"
+dependencies = [
+    "fastapi[standard] (>=0.129.0,<0.130.0)",
+    "pydantic (>=2.12.5,<3.0.0)",
+    "sqlalchemy[asyncio] (>=2.0.46,<3.0.0)",
+    "aiosqlite (>=0.22.1,<0.23.0)",
+    "pydantic-settings (>=2.13.0,<3.0.0)",
+    "alembic (>=1.18.4,<2.0.0)",
+    "pwdlib[argon2] (>=0.3.0,<0.4.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
