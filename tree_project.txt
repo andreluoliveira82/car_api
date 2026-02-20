@@ -1,0 +1,72 @@
+.
+├── alembic.ini
+├── car_api
+│   ├── app.py
+│   ├── core
+│   │   ├── database.py
+│   │   ├── __pycache__
+│   │   │   ├── database.cpython-313.pyc
+│   │   │   ├── security.cpython-313.pyc
+│   │   │   └── settings.cpython-313.pyc
+│   │   ├── security.py
+│   │   └── settings.py
+│   ├── __init__.py
+│   ├── models
+│   │   ├── base.py
+│   │   ├── cars.py
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── base.cpython-313.pyc
+│   │   │   ├── cars.cpython-313.pyc
+│   │   │   ├── __init__.cpython-313.pyc
+│   │   │   └── users.cpython-313.pyc
+│   │   └── users.py
+│   ├── __pycache__
+│   │   ├── app.cpython-313.pyc
+│   │   ├── db.cpython-313.pyc
+│   │   └── __init__.cpython-313.pyc
+│   ├── routers
+│   │   ├── auth.py
+│   │   ├── brands.py
+│   │   ├── cars.py
+│   │   ├── __pycache__
+│   │   │   ├── auth.cpython-313.pyc
+│   │   │   ├── brands.cpython-313.pyc
+│   │   │   ├── cars.cpython-313.pyc
+│   │   │   └── users.cpython-313.pyc
+│   │   └── users.py
+│   ├── schemas
+│   │   ├── auth.py
+│   │   ├── brands.py
+│   │   ├── cars.py
+│   │   ├── __pycache__
+│   │   │   ├── auth.cpython-313.pyc
+│   │   │   ├── brands.cpython-313.pyc
+│   │   │   ├── cars.cpython-313.pyc
+│   │   │   └── users.cpython-313.pyc
+│   │   └── users.py
+│   └── validators
+│       ├── cars.py
+│       ├── __pycache__
+│       │   ├── cars.cpython-313.pyc
+│       │   └── users.cpython-313.pyc
+│       └── users.py
+├── cars.db
+├── migrations
+│   ├── env.py
+│   ├── __pycache__
+│   │   └── env.cpython-313.pyc
+│   ├── README
+│   ├── script.py.mako
+│   └── versions
+│       ├── 5703f5486d12_init_database.py
+│       └── __pycache__
+│           └── 5703f5486d12_init_database.cpython-313.pyc
+├── poetry.lock
+├── pyproject.toml
+├── README.md
+├── tests
+│   └── __init__.py
+└── tree_project.txt
+
+18 directories, 52 files

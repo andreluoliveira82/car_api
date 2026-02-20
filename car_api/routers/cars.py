@@ -4,43 +4,49 @@
 # ===============================================================================================
 
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException, status,Query
+from typing import Optional
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import exists, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from typing import Optional
 
 from car_api.core.database import get_db_session
+from car_api.core.security import get_current_user, verify_car_ownership
 from car_api.models.cars import (
-    Brand, Car, CarColor, CarCondition, CarStatus, CarType, FuelType, TransmissionType
+    Brand,
+    Car,
+    CarColor,
+    CarCondition,
+    CarStatus,
+    CarType,
+    FuelType,
+    TransmissionType,
 )
 from car_api.models.users import User
 from car_api.schemas.cars import (
-    CarSchema,
     CarListPublicSchema,
     CarPublicSchema,
-    CarUpdateSchema
+    CarSchema,
+    CarUpdateSchema,
 )
 from car_api.validators.cars import validate_car_model_year
 
-
-router = APIRouter(
-    prefix="/cars",
-    tags=["cars"]
-)
+router = APIRouter(prefix='/cars', tags=['cars'])
 
 
 # ===============================================================================================
 @router.post(
-    path="/",
+    path='/',
     status_code=status.HTTP_201_CREATED,
     response_model=CarPublicSchema,
-    summary="Criar um novo carro.",
-    description="Endpoint para criar um novo carro no sistema."
+    summary='Criar um novo carro.',
+    description='Endpoint para criar um novo carro no sistema.',
 )
 async def create_car(
     car: CarSchema,
-    db: AsyncSession = Depends(get_db_session)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
 ) -> CarPublicSchema:
     """
     Create a new car in the database.
@@ -49,37 +55,24 @@ async def create_car(
     # ============================
     # Validar se a marca existe
     # ============================
-    brand_exists = await db.scalar(
-        select(exists().where(Brand.id == car.brand_id))
-    )
+    brand_exists = await db.scalar(select(exists().where(Brand.id == car.brand_id)))
     if not brand_exists:
-        raise HTTPException(
-            status_code=400,
-            detail="A marca informada não existe."
-        )
+        raise HTTPException(status_code=400, detail='A marca informada não existe.')
 
     # ============================
     # Validar se o proprietário existe
     # ============================
-    owner_exists = await db.scalar(
-        select(exists().where(User.id == car.owner_id))
-    )
+    owner_exists = await db.scalar(select(exists().where(User.id == car.owner_id)))
     if not owner_exists:
-        raise HTTPException(
-            status_code=400,
-            detail="O proprietário informado não existe."
-        )
+        raise HTTPException(status_code=400, detail='O proprietário informado não existe.')
 
     # ============================
     # Validar placa duplicada
     # ============================
-    plate_exists = await db.scalar(
-        select(exists().where(Car.plate == car.plate))
-    )
+    plate_exists = await db.scalar(select(exists().where(Car.plate == car.plate)))
     if plate_exists:
         raise HTTPException(
-            status_code=400,
-            detail="Já existe um carro cadastrado com esta placa."
+            status_code=400, detail='Já existe um carro cadastrado com esta placa.'
         )
 
     # ============================
@@ -100,7 +93,7 @@ async def create_car(
         price=car.price,
         description=car.description,
         brand_id=car.brand_id,
-        owner_id=car.owner_id
+        owner_id=current_user.id,
     )
 
     db.add(db_car)
@@ -121,15 +114,16 @@ async def create_car(
 
 # ===============================================================================================
 @router.get(
-    path="/{car_id}",
+    path='/{car_id}',
     status_code=status.HTTP_200_OK,
     response_model=CarPublicSchema,
-    summary="Obter detalhes de um carro pelo ID.",
-    description="Retorna os detalhes completos de um carro, incluindo marca e proprietário."
+    summary='Obter detalhes de um carro pelo ID.',
+    description='Retorna os detalhes completos de um carro, incluindo marca e proprietário.',
 )
 async def get_car_by_id(
     car_id: int,
-    db: AsyncSession = Depends(get_db_session)
+    # current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
 ) -> CarPublicSchema:
     """
     Retrieve a car by its ID, including brand and owner relationships.
@@ -137,10 +131,7 @@ async def get_car_by_id(
 
     result = await db.execute(
         select(Car)
-        .options(
-            selectinload(Car.brand),
-            selectinload(Car.owner)
-        )
+        .options(selectinload(Car.brand), selectinload(Car.owner))
         .where(Car.id == car_id)
     )
 
@@ -149,7 +140,7 @@ async def get_car_by_id(
     if not car:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Carro com ID {car_id} não encontrado."
+            detail=f'Carro com ID {car_id} não encontrado.',
         )
 
     return car
@@ -157,36 +148,35 @@ async def get_car_by_id(
 
 # ===============================================================================================
 @router.get(
-    path="/",
+    path='/',
     status_code=status.HTTP_200_OK,
     response_model=CarListPublicSchema,
-    summary="Listar carros com paginação e filtros opcionais.",
+    summary='Listar carros com paginação e filtros opcionais.',
     description=(
-        "Retorna uma lista paginada de carros. "
-        "Permite filtrar por tipo, cor, ano, preço, marca, status e outros atributos."
-    )
+        'Retorna uma lista paginada de carros. '
+        'Permite filtrar por tipo, cor, ano, preço, marca, status e outros atributos.'
+    ),
 )
 async def list_cars(
-    db: AsyncSession = Depends(get_db_session),
-
     # Paginação
     offset: int = Query(0, ge=0, examples=0),
     limit: int = Query(10, ge=1, le=100, examples=10),
-
     # Filtros opcionais
-    search: Optional[str] = Query(None, description="Pesquisa pelo modelo, cor ou placa"),
-    car_type: Optional[CarType] = Query(None, examples="suv"),
-    color: Optional[CarColor] = Query(None, examples="white"),
-    fuel_type: Optional[FuelType] = Query(None, examples="flex"),
-    transmission: Optional[TransmissionType] = Query(None, examples="automatic"),
-    condition: Optional[CarCondition] = Query(None, examples="used"),
-    status: Optional[CarStatus] = Query(None, examples="available"),
+    search: Optional[str] = Query(None, description='Pesquisa pelo modelo, cor ou placa'),
+    car_type: Optional[CarType] = Query(None, examples='suv'),
+    color: Optional[CarColor] = Query(None, examples='white'),
+    fuel_type: Optional[FuelType] = Query(None, examples='flex'),
+    transmission: Optional[TransmissionType] = Query(None, examples='automatic'),
+    condition: Optional[CarCondition] = Query(None, examples='used'),
+    status: Optional[CarStatus] = Query(None, examples='available'),
     brand_id: Optional[int] = Query(None, examples=1),
     owner_id: Optional[int] = Query(None, examples=3),
     min_year: Optional[int] = Query(None, examples=2015),
     max_year: Optional[int] = Query(None, examples=2026),
     min_price: Optional[Decimal] = Query(None, examples=50000),
     max_price: Optional[Decimal] = Query(None, examples=200000),
+    # current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
 ):
     """
     List cars with optional filters and pagination.
@@ -195,10 +185,7 @@ async def list_cars(
     # ============================
     # Construir query base
     # ============================
-    query = (
-        select(Car)
-        .options(selectinload(Car.brand), selectinload(Car.owner))
-    )
+    query = select(Car).options(selectinload(Car.brand), selectinload(Car.owner))
 
     # ============================
     # Aplicar filtros opcionais
@@ -206,9 +193,9 @@ async def list_cars(
     if search:
         search_term = f'%{search}%'
         query = query.where(
-            (Car.model.ilike(search_term)) |
-            (Car.color.ilike(search_term)) |
-            (Car.plate.ilike(search_term))
+            (Car.model.ilike(search_term))
+            | (Car.color.ilike(search_term))
+            | (Car.plate.ilike(search_term))
         )
 
     if car_type:
@@ -250,9 +237,7 @@ async def list_cars(
     # ============================
     # Contar total antes da paginação
     # ============================
-    total = await db.scalar(
-        select(func.count()).select_from(query.subquery())
-    )
+    total = await db.scalar(select(func.count()).select_from(query.subquery()))
 
     # ============================
     # Aplicar paginação
@@ -265,26 +250,22 @@ async def list_cars(
     # ============================
     # Retornar resposta paginada
     # ============================
-    return CarListPublicSchema(
-        cars=cars,
-        offset=offset,
-        limit=limit,
-        total=total
-    )
+    return CarListPublicSchema(cars=cars, offset=offset, limit=limit, total=total)
 
 
 # ===============================================================================================
 @router.put(
-    path="/{car_id}",
+    path='/{car_id}',
     status_code=status.HTTP_200_OK,
     response_model=CarPublicSchema,
-    summary="Atualizar um carro pelo ID.",
-    description="Atualiza parcialmente os dados de um carro existente."
+    summary='Atualizar um carro pelo ID.',
+    description='Atualiza parcialmente os dados de um carro existente.',
 )
 async def update_car(
     car_id: int,
     car_data: CarUpdateSchema,
-    db: AsyncSession = Depends(get_db_session)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
 ) -> CarPublicSchema:
     """
     Update an existing car by ID.
@@ -303,8 +284,13 @@ async def update_car(
     if not db_car:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Carro com ID {car_id} não encontrado."
+            detail=f'Carro com ID {car_id} não encontrado.',
         )
+
+    # ============================
+    # Validar se o usuário logado é o dono do carro
+    # =============================
+    verify_car_ownership(current_user, db_car.owner_id)
 
     # ============================
     # Validar placa duplicada
@@ -316,7 +302,7 @@ async def update_car(
         if plate_exists:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Já existe um carro cadastrado com esta placa."
+                detail='Já existe um carro cadastrado com esta placa.',
             )
 
     # ============================
@@ -329,7 +315,7 @@ async def update_car(
         if not brand_exists:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A marca informada não existe."
+                detail='A marca informada não existe.',
             )
 
     # ============================
@@ -342,7 +328,7 @@ async def update_car(
         if not owner_exists:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="O proprietário informado não existe."
+                detail='O proprietário informado não existe.',
             )
 
     # ============================
@@ -356,11 +342,8 @@ async def update_car(
     # ============================
     # Validar anos (factory/model)
     # ============================
-    if ("factory_year" in update_fields) or ("model_year" in update_fields):
-        validate_car_model_year(
-            db_car.model_year,
-            db_car.factory_year
-        )
+    if ('factory_year' in update_fields) or ('model_year' in update_fields):
+        validate_car_model_year(db_car.model_year, db_car.factory_year)
 
     # ============================
     # Salvar alterações
@@ -373,14 +356,15 @@ async def update_car(
 
 # ===============================================================================================
 @router.delete(
-    path="/{car_id}",
+    path='/{car_id}',
     status_code=status.HTTP_204_NO_CONTENT,
-    summary="Excluir um carro pelo ID.",
-    description="Remove um carro existente do sistema."
+    summary='Excluir um carro pelo ID.',
+    description='Remove um carro existente do sistema.',
 )
 async def delete_car(
     car_id: int,
-    db: AsyncSession = Depends(get_db_session)
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db_session),
 ) -> None:
     """
     Delete a car by its ID.
@@ -389,16 +373,19 @@ async def delete_car(
     # ============================
     # Verificar se o carro existe
     # ============================
-    result = await db.execute(
-        select(Car).where(Car.id == car_id)
-    )
+    result = await db.execute(select(Car).where(Car.id == car_id))
     db_car = result.scalar_one_or_none()
 
     if not db_car:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Carro com ID {car_id} não encontrado."
+            detail=f'Carro com ID {car_id} não encontrado.',
         )
+
+    # ============================
+    # Validar se o usuário logado é o dono do carro
+    # =============================
+    verify_car_ownership(current_user, db_car.owner_id)
 
     # ============================
     # Remover o carro
@@ -409,4 +396,3 @@ async def delete_car(
     # ============================
     # Retorno 204 (sem conteúdo)
     # ============================
-    return None

@@ -14,10 +14,42 @@ dependencies = [
     "aiosqlite (>=0.22.1,<0.23.0)",
     "pydantic-settings (>=2.13.0,<3.0.0)",
     "alembic (>=1.18.4,<2.0.0)",
-    "pwdlib[argon2] (>=0.3.0,<0.4.0)"
+    "pwdlib[argon2] (>=0.3.0,<0.4.0)",
+    "pyjwt (>=2.11.0,<3.0.0)"
 ]
 
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[dependency-groups]
+dev = [
+    "ruff (>=0.15.2,<0.16.0)",
+    "taskipy (>=1.14.1,<2.0.0)"
+]
+
+[tool.ruff]
+line-length = 92
+
+[tool.ruff.lint]
+preview = true
+select = ['I', 'F', 'E', 'W', 'PL', 'PT']
+ignore = [
+    'E501',        # Comentários e docstrings longos
+    'PLR2004',     # Números mágicos
+    'PLR0917',     # Muitos argumentos
+    'PLR0913',     # Muitos parâmetros
+    'PLR0912',     # Muitas branches (endpoints complexos)
+]
+
+
+[tool.ruff.format]
+preview = true
+quote-style = 'single'
+
+[tool.taskipy.tasks]
+lint = 'ruff check'
+pre_format = 'ruff check --fix'
+format = 'ruff format'
+run = 'fastapi dev car_api/app.py'
