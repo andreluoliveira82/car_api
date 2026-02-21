@@ -186,7 +186,7 @@ async def deactivate_car(
             detail='Carro não encontrado.',
         )
 
-    car.status = CarStatus.INACTIVE
+    car.status = CarStatus.UNAVAILABLE
     await db.commit()
     await db.refresh(car)
 

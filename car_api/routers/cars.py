@@ -60,13 +60,6 @@ async def create_car(
         raise HTTPException(status_code=400, detail='A marca informada não existe.')
 
     # ============================
-    # Validar se o proprietário existe
-    # ============================
-    owner_exists = await db.scalar(select(exists().where(User.id == car.owner_id)))
-    if not owner_exists:
-        raise HTTPException(status_code=400, detail='O proprietário informado não existe.')
-
-    # ============================
     # Validar placa duplicada
     # ============================
     plate_exists = await db.scalar(select(exists().where(Car.plate == car.plate)))
@@ -310,25 +303,12 @@ async def update_car(
     # ============================
     if car_data.brand_id:
         brand_exists = await db.scalar(
-            select(func.count()).where(Car.brand_id == car_data.brand_id)
+            select(exists().where(Brand.id == car_data.brand_id))
         )
         if not brand_exists:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail='A marca informada não existe.',
-            )
-
-    # ============================
-    # Validar proprietário (se enviado)
-    # ============================
-    if car_data.owner_id:
-        owner_exists = await db.scalar(
-            select(func.count()).where(Car.owner_id == car_data.owner_id)
-        )
-        if not owner_exists:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail='O proprietário informado não existe.',
             )
 
     # ============================
